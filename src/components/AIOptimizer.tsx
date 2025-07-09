@@ -4,6 +4,7 @@ import { Bot, Send, Lightbulb, TrendingUp, AlertCircle } from 'lucide-react';
 interface Props {
   darkMode: boolean;
   activeTab: string;
+  productType: 'tiles' | 'tools' | null;
 }
 
 interface Message {
@@ -13,7 +14,7 @@ interface Message {
   timestamp: Date;
 }
 
-const AIOptimizer: React.FC<Props> = ({ darkMode, activeTab }) => {
+const AIOptimizer: React.FC<Props> = ({ darkMode, activeTab, productType }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -21,9 +22,9 @@ const AIOptimizer: React.FC<Props> = ({ darkMode, activeTab }) => {
   // Initialize with a welcome message based on active tab
   useEffect(() => {
     const welcomeMessages = {
-      'master-carton': 'Hi! I\'m your AI optimization assistant. I can help you maximize space utilization in master carton loading. Upload your product image and dimensions to get started!',
-      'pallet': 'Hello! I\'m here to help optimize your pallet loading efficiency. Share your carton and pallet specifications, and I\'ll provide real-time optimization suggestions.',
-      'container': 'Welcome! I specialize in container loading optimization. Tell me about your pallet configurations and container type for personalized loading strategies.'
+      'master-carton': `Hi! I'm your AI optimization assistant for ${productType || 'general'} products. I can help you maximize space utilization in master carton loading. ${productType === 'tiles' ? 'I\'ll ensure vertical stacking constraints are respected for tiles.' : 'I can suggest mixed orientations for optimal packing.'} Upload your product image and dimensions to get started!`,
+      'pallet': `Hello! I'm here to help optimize your pallet loading efficiency for ${productType || 'general'} products. ${productType === 'tiles' ? 'I\'ll focus on vertical-only arrangements for tiles.' : 'I can suggest mixed orientations and rotations for tools.'} Share your carton and pallet specifications for real-time optimization suggestions.`,
+      'container': `Welcome! I specialize in container loading optimization for ${productType || 'general'} products. Tell me about your pallet configurations and container type for personalized loading strategies.`
     };
 
     setMessages([{
@@ -32,7 +33,7 @@ const AIOptimizer: React.FC<Props> = ({ darkMode, activeTab }) => {
       content: welcomeMessages[activeTab as keyof typeof welcomeMessages] || welcomeMessages['master-carton'],
       timestamp: new Date()
     }]);
-  }, [activeTab]);
+  }, [activeTab, productType]);
 
   const sendMessage = async () => {
     if (!inputValue.trim()) return;

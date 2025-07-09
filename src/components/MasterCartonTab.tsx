@@ -6,6 +6,7 @@ import OptimizationResults from './OptimizationResults';
 
 interface Props {
   darkMode: boolean;
+  productType: 'tiles' | 'tools' | null;
 }
 
 interface FormData {
@@ -18,7 +19,7 @@ interface FormData {
   unit: 'cm' | 'inch' | 'mm';
 }
 
-const MasterCartonTab: React.FC<Props> = ({ darkMode }) => {
+const MasterCartonTab: React.FC<Props> = ({ darkMode, productType }) => {
   const [formData, setFormData] = useState<FormData>({
     productImage: null,
     cartonLength: 0,
@@ -70,10 +71,20 @@ const MasterCartonTab: React.FC<Props> = ({ darkMode }) => {
           <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             Product Image Upload
           </h2>
+          {productType && (
+            <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+              productType === 'tiles' 
+                ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
+                : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+            }`}>
+              {productType.toUpperCase()} MODE
+            </div>
+          )}
         </div>
         <ImageUpload 
           darkMode={darkMode} 
           onImageSelect={(file) => handleInputChange('productImage', file)}
+          productType={productType}
         />
       </div>
 
@@ -230,6 +241,7 @@ const MasterCartonTab: React.FC<Props> = ({ darkMode }) => {
         <LoadingAnimation 
           darkMode={darkMode} 
           type="master-carton"
+          productType={productType}
           onComplete={() => setShowAnimation(false)}
         />
       )}
@@ -239,6 +251,7 @@ const MasterCartonTab: React.FC<Props> = ({ darkMode }) => {
         <OptimizationResults 
           darkMode={darkMode} 
           type="master-carton"
+          productType={productType}
           data={formData}
         />
       )}

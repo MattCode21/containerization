@@ -4,9 +4,10 @@ import { Upload, Image, X, Check } from 'lucide-react';
 interface Props {
   darkMode: boolean;
   onImageSelect: (file: File) => void;
+  productType?: 'tiles' | 'tools' | null;
 }
 
-const ImageUpload: React.FC<Props> = ({ darkMode, onImageSelect }) => {
+const ImageUpload: React.FC<Props> = ({ darkMode, onImageSelect, productType }) => {
   const [dragActive, setDragActive] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -176,6 +177,8 @@ const ImageUpload: React.FC<Props> = ({ darkMode, onImageSelect }) => {
               <div className={`mt-3 p-3 rounded-lg ${darkMode ? 'bg-green-500/20' : 'bg-green-50'}`}>
                 <p className={`text-sm ${darkMode ? 'text-green-300' : 'text-green-700'}`}>
                   ✓ Background removed and product isolated for optimal stacking analysis
+                  {productType === 'tiles' && ' (Vertical stacking mode enabled)'}
+                  {productType === 'tools' && ' (Mixed orientation mode enabled)'}
                 </p>
               </div>
             )}

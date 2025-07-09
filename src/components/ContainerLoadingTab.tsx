@@ -5,6 +5,7 @@ import OptimizationResults from './OptimizationResults';
 
 interface Props {
   darkMode: boolean;
+  productType: 'tiles' | 'tools' | null;
 }
 
 interface PalletSize {
@@ -39,7 +40,7 @@ const containerSpecs = {
   }
 };
 
-const ContainerLoadingTab: React.FC<Props> = ({ darkMode }) => {
+const ContainerLoadingTab: React.FC<Props> = ({ darkMode, productType }) => {
   const [formData, setFormData] = useState<FormData>({
     containerType: '20ft',
     unit: 'cm',
@@ -122,6 +123,15 @@ const ContainerLoadingTab: React.FC<Props> = ({ darkMode }) => {
           <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             Container Specifications
           </h2>
+          {productType && (
+            <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+              productType === 'tiles' 
+                ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
+                : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+            }`}>
+              {productType.toUpperCase()} MODE
+            </div>
+          )}
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
@@ -350,6 +360,7 @@ const ContainerLoadingTab: React.FC<Props> = ({ darkMode }) => {
         <LoadingAnimation 
           darkMode={darkMode} 
           type="container"
+          productType={productType}
           onComplete={() => setShowAnimation(false)}
         />
       )}
@@ -359,6 +370,7 @@ const ContainerLoadingTab: React.FC<Props> = ({ darkMode }) => {
         <OptimizationResults 
           darkMode={darkMode} 
           type="container"
+        productType={productType}
           data={formData}
         />
       )}

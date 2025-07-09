@@ -4,31 +4,40 @@ import { BarChart3, Package, TrendingUp, Lightbulb, Download, Share2 } from 'luc
 interface Props {
   darkMode: boolean;
   type: 'master-carton' | 'pallet' | 'container';
+  productType?: 'tiles' | 'tools' | null;
   data: any;
 }
 
-const OptimizationResults: React.FC<Props> = ({ darkMode, type, data }) => {
+const OptimizationResults: React.FC<Props> = ({ darkMode, type, productType, data }) => {
   const results = {
     'master-carton': {
-      itemsLoaded: 48,
-      spaceUtilized: 92,
-      weightEfficiency: 87,
+      itemsLoaded: productType === 'tiles' ? 36 : 48,
+      spaceUtilized: productType === 'tiles' ? 88 : 92,
+      weightEfficiency: productType === 'tiles' ? 91 : 87,
       volume: 15.6,
       recommendations: [
-        'Consider rotating products 90° for 3% better space utilization',
-        'Current arrangement optimizes both space and weight constraints',
-        'Alternative stacking pattern could fit 2 additional items'
+        productType === 'tiles' 
+          ? 'Vertical stacking optimized for tile stability and protection'
+          : 'Consider rotating products 90° for 3% better space utilization',
+        `Current arrangement optimizes both space and weight constraints for ${productType || 'products'}`,
+        productType === 'tiles'
+          ? 'Tile arrangement prevents damage during transport'
+          : 'Alternative stacking pattern could fit 2 additional items'
       ]
     },
     'pallet': {
-      itemsLoaded: 24,
-      spaceUtilized: 89,
-      weightEfficiency: 91,
+      itemsLoaded: productType === 'tiles' ? 20 : 24,
+      spaceUtilized: productType === 'tiles' ? 85 : 89,
+      weightEfficiency: productType === 'tiles' ? 94 : 91,
       volume: 85.2,
       recommendations: [
-        'Mixed orientation stacking increases efficiency by 8%',
-        'Add 2 more cartons in vertical space for optimal loading',
-        'Weight distribution is excellent across pallet surface'
+        productType === 'tiles'
+          ? 'Vertical-only stacking ensures tile integrity during transport'
+          : 'Mixed orientation stacking increases efficiency by 8%',
+        productType === 'tiles'
+          ? 'Optimal vertical arrangement achieved within height constraints'
+          : 'Add 2 more cartons in vertical space for optimal loading',
+        `Weight distribution is excellent across pallet surface for ${productType || 'products'}`
       ]
     },
     'container': {

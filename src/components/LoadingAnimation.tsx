@@ -4,26 +4,27 @@ import { Play, Pause, RotateCcw } from 'lucide-react';
 interface Props {
   darkMode: boolean;
   type: 'master-carton' | 'pallet' | 'container';
+  productType?: 'tiles' | 'tools' | null;
   onComplete: () => void;
 }
 
-const LoadingAnimation: React.FC<Props> = ({ darkMode, type, onComplete }) => {
+const LoadingAnimation: React.FC<Props> = ({ darkMode, type, productType, onComplete }) => {
   const [progress, setProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [step, setStep] = useState(0);
 
   const steps = {
     'master-carton': [
-      'Analyzing product dimensions...',
-      'Calculating optimal product arrangement...',
-      'Simulating 3D stacking patterns...',
+      `Analyzing ${productType || 'product'} dimensions...`,
+      `Calculating optimal ${productType || 'product'} arrangement...`,
+      `Simulating 3D stacking patterns${productType === 'tiles' ? ' (vertical only)' : productType === 'tools' ? ' (mixed orientations)' : ''}...`,
       'Validating weight constraints...',
       'Generating final layout...'
     ],
     'pallet': [
       'Processing carton specifications...',
-      'Optimizing pallet space utilization...',
-      'Testing multiple arrangement patterns...',
+      `Optimizing pallet space utilization${productType === 'tiles' ? ' (vertical constraints)' : ''}...`,
+      `Testing ${productType === 'tiles' ? 'vertical' : 'multiple'} arrangement patterns...`,
       'Calculating weight distribution...',
       'Finalizing optimal configuration...'
     ],

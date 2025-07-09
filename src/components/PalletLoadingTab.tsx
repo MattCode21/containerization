@@ -5,6 +5,7 @@ import OptimizationResults from './OptimizationResults';
 
 interface Props {
   darkMode: boolean;
+  productType: 'tiles' | 'tools' | null;
 }
 
 interface CartonSize {
@@ -25,7 +26,7 @@ interface FormData {
   cartonSizes: CartonSize[];
 }
 
-const PalletLoadingTab: React.FC<Props> = ({ darkMode }) => {
+const PalletLoadingTab: React.FC<Props> = ({ darkMode, productType }) => {
   const [formData, setFormData] = useState<FormData>({
     palletLength: 120,
     palletWidth: 80,
@@ -109,6 +110,15 @@ const PalletLoadingTab: React.FC<Props> = ({ darkMode }) => {
           <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             Pallet Specifications
           </h2>
+          {productType && (
+            <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+              productType === 'tiles' 
+                ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
+                : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+            }`}>
+              {productType.toUpperCase()} MODE - {productType === 'tiles' ? 'Vertical Only' : 'Mixed Orientations'}
+            </div>
+          )}
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -354,6 +364,7 @@ const PalletLoadingTab: React.FC<Props> = ({ darkMode }) => {
         <LoadingAnimation 
           darkMode={darkMode} 
           type="pallet"
+          productType={productType}
           onComplete={() => setShowAnimation(false)}
         />
       )}
@@ -363,6 +374,7 @@ const PalletLoadingTab: React.FC<Props> = ({ darkMode }) => {
         <OptimizationResults 
           darkMode={darkMode} 
           type="pallet"
+          productType={productType}
           data={formData}
         />
       )}
