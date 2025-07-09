@@ -8,22 +8,25 @@ interface Props {
   onComplete: () => void;
 }
 
+interface Box {
+  id: number;
+  x: number;
+  y: number;
+  z: number;
+  width: number;
+  height: number;
+  depth: number;
+  color: string;
+  opacity: number;
+}
+
 const LoadingAnimation: React.FC<Props> = ({ darkMode, type, productType, onComplete }) => {
   const [progress, setProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [step, setStep] = useState(0);
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
-  const [placedBoxes, setPlacedBoxes] = useState<Array<{
-    id: number;
-    x: number;
-    y: number;
-    z: number;
-    width: number;
-    height: number;
-    depth: number;
-    color: string;
-    opacity: number;
-  }>>([]);
+  const [placedBoxes, setPlacedBoxes] = useState<Box[]>([]);
+  const [viewAngle, setViewAngle] = useState({ rotateX: 20, rotateY: 45 });
 
   // Aesthetic background images from Pexels
   const backgroundImages = [
@@ -31,8 +34,7 @@ const LoadingAnimation: React.FC<Props> = ({ darkMode, type, productType, onComp
     'https://images.pexels.com/photos/1323550/pexels-photo-1323550.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop',
     'https://images.pexels.com/photos/1366919/pexels-photo-1366919.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop',
     'https://images.pexels.com/photos/1323712/pexels-photo-1323712.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop',
-    'https://images.pexels.com/photos/1366942/pexels-photo-1366942.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop',
-    'https://images.pexels.com/photos/1323550/pexels-photo-1323550.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop'
+    'https://images.pexels.com/photos/1366942/pexels-photo-1366942.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop'
   ];
 
   const steps = {
@@ -59,9 +61,115 @@ const LoadingAnimation: React.FC<Props> = ({ darkMode, type, productType, onComp
     ]
   };
 
+  // Generate realistic 3D bin packing layout
+  const generateBinPackingLayout = () => {
+    const boxes: Box[] = [];
+    const containerWidth = 280;
+    const containerHeight = 200;
+    const containerDepth = 160;
+    
+    // Different packing strategies based on product type
+    if (productType === 'tiles') {
+      // Grid-based packing for tiles (vertical only)
+      const boxWidth = 20;
+      const boxHeight = 25;
+      const boxDepth = 15;
+      
+      const cols = Math.floor(containerWidth / boxWidth);
+      const rows = Math.floor(containerDepth / boxDepth);
+      const layers = Math.floor(containerHeight / boxHeight);
+      
+      let id = 0;
+      for (let layer = 0; layer < layers && id < 50; layer++) {
+        for (let row = 0; row < rows && id < 50; row++) {
+          for (let col = 0; col < cols && id < 50; col++) {
+            boxes.push({
+              id: id++,
+              x: col * boxWidth,
+              y: layer * boxHeight,
+              z: row * boxDepth,
+              width: boxWidth,
+              height: boxHeight,
+              depth: boxDepth,
+              color: '#F97316',
+              opacity: 0.7
+            });
+          }
+        }
+      }
+    } else {
+      // Mixed orientation packing for tools
+      const orientations = [
+        { w: 18, h: 22, d: 12 },
+        { w: 22, h: 18, d: 12 },
+        { w: 15, h: 20, d: 18 },
+        { w: 20, h: 15, d: 18 },
+        { w: 25, h: 16, d: 10 }
+      ];
+      
+      let id = 0;
+      let x = 0, y = 0, z = 0;
+      
+      // Simulate bin packing algorithm
+      while (id < 60) {
+        const orientation = orientations[id % orientations.length];
+        
+        // Check if box fits in current position
+        if (x + orientation.w <= containerWidth && 
+            y + orientation.h <= containerHeight && 
+            z + orientation.d <= containerDepth) {
+          
+          boxes.push({
+            id: id++,
+            x: x,
+            y: y,
+            z: z,
+            width: orientation.w,
+            height: orientation.h,
+            depth: orientation.d,
+            color: '#10B981',
+            opacity: 0.7
+          });
+          
+          // Move to next position
+          x += orientation.w;
+          if (x >= containerWidth - 15) {
+            x = 0;
+            z += orientation.d;
+            if (z >= containerDepth - 15) {
+              z = 0;
+              y += orientation.h;
+              if (y >= containerHeight - 15) break;
+            }
+          }
+        } else {
+          // Try next layer
+          x = 0;
+          z += 15;
+          if (z >= containerDepth - 15) {
+            z = 0;
+            y += 20;
+            if (y >= containerHeight - 15) break;
+          }
+        }
+      }
+    }
+    
+    return boxes;
+  };
+
+  const allBoxes = generateBinPackingLayout();
+
   const getRandomBackground = () => {
     const randomIndex = Math.floor(Math.random() * backgroundImages.length);
     setBackgroundImage(backgroundImages[randomIndex]);
+  };
+
+  const rotateView = () => {
+    setViewAngle(prev => ({
+      rotateX: (prev.rotateX + 30) % 360,
+      rotateY: (prev.rotateY + 45) % 360
+    }));
   };
 
   useEffect(() => {
@@ -69,28 +177,13 @@ const LoadingAnimation: React.FC<Props> = ({ darkMode, type, productType, onComp
 
     const interval = setInterval(() => {
       setProgress(prev => {
-        const newProgress = prev + 1.5;
+        const newProgress = prev + 2;
         const newStep = Math.floor(newProgress / 20);
         setStep(Math.min(newStep, steps[type].length - 1));
         
-        // Add new boxes as progress increases
-        if (newProgress % 8 === 0 && newProgress < 96) {
-          const boxCount = Math.floor(newProgress / 8);
-          const newBox = {
-            id: boxCount,
-            x: (boxCount % 8) * 12 + 10,
-            y: Math.floor(boxCount / 8) * 15 + 20,
-            z: Math.floor(boxCount / 16) * 10 + 5,
-            width: 8 + Math.random() * 4,
-            height: 6 + Math.random() * 8,
-            depth: 6 + Math.random() * 4,
-            color: type === 'master-carton' ? '#3B82F6' : 
-                   type === 'pallet' ? '#F97316' : '#8B5CF6',
-            opacity: 0.8 + Math.random() * 0.2
-          };
-          
-          setPlacedBoxes(prev => [...prev, newBox]);
-        }
+        // Add boxes progressively
+        const boxesToShow = Math.floor((newProgress / 100) * allBoxes.length);
+        setPlacedBoxes(allBoxes.slice(0, boxesToShow));
         
         if (newProgress >= 100) {
           setTimeout(onComplete, 500);
@@ -101,7 +194,7 @@ const LoadingAnimation: React.FC<Props> = ({ darkMode, type, productType, onComp
     }, 100);
 
     return () => clearInterval(interval);
-  }, [isPlaying, onComplete, type]);
+  }, [isPlaying, onComplete, type, allBoxes.length]);
 
   const cardClass = `backdrop-blur-lg border transition-all duration-300 rounded-2xl p-6 ${
     darkMode 
@@ -113,7 +206,7 @@ const LoadingAnimation: React.FC<Props> = ({ darkMode, type, productType, onComp
     <div className={cardClass}>
       <div className="flex items-center justify-between mb-6">
         <h3 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-          3D Optimization in Progress
+          3D Bin Packing Optimization
         </h3>
         <div className="flex items-center space-x-2">
           <button
@@ -124,6 +217,15 @@ const LoadingAnimation: React.FC<Props> = ({ darkMode, type, productType, onComp
             title="Change Background"
           >
             <Image className="w-4 h-4" />
+          </button>
+          <button
+            onClick={rotateView}
+            className={`p-2 rounded-lg transition-all duration-300 ${
+              darkMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-blue-500 hover:bg-blue-600'
+            } text-white`}
+            title="Rotate View"
+          >
+            <RotateCcw className="w-4 h-4" />
           </button>
           <button
             onClick={() => setIsPlaying(!isPlaying)}
@@ -140,135 +242,176 @@ const LoadingAnimation: React.FC<Props> = ({ darkMode, type, productType, onComp
         </div>
       </div>
 
-      {/* Enhanced 3D Visualization Container */}
-      <div className={`relative mb-6 rounded-xl overflow-hidden h-96 ${
+      {/* 3D Bin Packing Visualization */}
+      <div className={`relative mb-6 rounded-xl overflow-hidden h-[500px] ${
         darkMode ? 'bg-gray-900' : 'bg-gray-50'
       }`}>
         {/* Background Image */}
         {backgroundImage && (
           <div 
-            className="absolute inset-0 bg-cover bg-center opacity-20"
+            className="absolute inset-0 bg-cover bg-center opacity-10"
             style={{ backgroundImage: `url(${backgroundImage})` }}
           />
         )}
         
         <div className="absolute inset-0 flex items-center justify-center">
-          {/* 3D Container Visualization */}
-          <div className="relative w-80 h-64" style={{ perspective: '1000px' }}>
-            {/* Container Outline with 3D effect */}
+          <div className="relative w-full h-full" style={{ perspective: '1000px' }}>
+            {/* 3D Container */}
             <div 
-              className={`absolute border-2 ${
-                darkMode ? 'border-gray-400' : 'border-gray-600'
-              } bg-gradient-to-br ${
-                darkMode ? 'from-gray-800/20 to-gray-700/20' : 'from-gray-100/20 to-gray-200/20'
-              }`}
+              className="absolute inset-0 flex items-center justify-center"
               style={{
-                width: '280px',
-                height: '200px',
-                left: '20px',
-                top: '20px',
-                transform: 'rotateX(15deg) rotateY(15deg)',
-                transformStyle: 'preserve-3d'
+                transform: `rotateX(${viewAngle.rotateX}deg) rotateY(${viewAngle.rotateY}deg)`,
+                transformStyle: 'preserve-3d',
+                transition: 'transform 0.5s ease-in-out'
               }}
             >
-              {/* Container floor */}
-              <div 
-                className={`absolute bottom-0 left-0 right-0 h-2 ${
-                  darkMode ? 'bg-gray-600' : 'bg-gray-400'
-                } opacity-50`}
-                style={{ transform: 'rotateX(90deg) translateZ(1px)' }}
-              />
-              
-              {/* Container back wall */}
-              <div 
-                className={`absolute top-0 bottom-0 right-0 w-2 ${
-                  darkMode ? 'bg-gray-600' : 'bg-gray-400'
-                } opacity-30`}
-                style={{ transform: 'rotateY(90deg) translateZ(1px)' }}
-              />
-            </div>
-            
-            {/* Realistic 3D Boxes */}
-            {placedBoxes.map((box, index) => (
-              <div
-                key={box.id}
-                className="absolute transition-all duration-500 ease-out"
-                style={{
-                  left: `${box.x}px`,
-                  top: `${box.y}px`,
-                  width: `${box.width}px`,
-                  height: `${box.height}px`,
-                  transform: `rotateX(15deg) rotateY(15deg) translateZ(${box.z}px)`,
-                  transformStyle: 'preserve-3d',
-                  opacity: box.opacity,
-                  animation: `boxAppear 0.5s ease-out ${index * 0.1}s both`
-                }}
-              >
-                {/* Box Front Face */}
-                <div
-                  className="absolute inset-0 border border-gray-800/20 shadow-lg"
-                  style={{
-                    backgroundColor: box.color,
-                    background: `linear-gradient(135deg, ${box.color} 0%, ${box.color}dd 100%)`,
-                  }}
-                />
-                
-                {/* Box Top Face */}
-                <div
-                  className="absolute border border-gray-800/20"
-                  style={{
-                    width: `${box.width}px`,
-                    height: `${box.depth}px`,
-                    backgroundColor: box.color,
-                    background: `linear-gradient(45deg, ${box.color}cc 0%, ${box.color}aa 100%)`,
-                    transform: `rotateX(90deg) translateZ(${box.height}px)`,
-                    transformOrigin: 'top'
-                  }}
-                />
-                
-                {/* Box Right Face */}
-                <div
-                  className="absolute border border-gray-800/20"
-                  style={{
-                    width: `${box.depth}px`,
-                    height: `${box.height}px`,
-                    backgroundColor: box.color,
-                    background: `linear-gradient(45deg, ${box.color}bb 0%, ${box.color}88 100%)`,
-                    transform: `rotateY(90deg) translateZ(${box.width}px)`,
-                    transformOrigin: 'right'
-                  }}
-                />
-                
-                {/* Box Label/Texture */}
-                <div 
-                  className="absolute inset-2 flex items-center justify-center text-white text-xs font-bold opacity-80"
-                  style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
-                >
-                  {productType === 'tiles' ? '🔲' : productType === 'tools' ? '🔧' : '📦'}
-                </div>
+              {/* Container wireframe */}
+              <div className="relative" style={{ 
+                width: '280px', 
+                height: '200px',
+                transformStyle: 'preserve-3d'
+              }}>
+                {/* Container edges */}
+                {[
+                  // Bottom edges
+                  { from: [0, 200, 0], to: [280, 200, 0] },
+                  { from: [0, 200, 0], to: [0, 200, 160] },
+                  { from: [280, 200, 0], to: [280, 200, 160] },
+                  { from: [0, 200, 160], to: [280, 200, 160] },
+                  // Top edges
+                  { from: [0, 0, 0], to: [280, 0, 0] },
+                  { from: [0, 0, 0], to: [0, 0, 160] },
+                  { from: [280, 0, 0], to: [280, 0, 160] },
+                  { from: [0, 0, 160], to: [280, 0, 160] },
+                  // Vertical edges
+                  { from: [0, 0, 0], to: [0, 200, 0] },
+                  { from: [280, 0, 0], to: [280, 200, 0] },
+                  { from: [0, 0, 160], to: [0, 200, 160] },
+                  { from: [280, 0, 160], to: [280, 200, 160] }
+                ].map((edge, i) => (
+                  <div
+                    key={i}
+                    className={`absolute ${darkMode ? 'bg-gray-400' : 'bg-gray-600'}`}
+                    style={{
+                      width: Math.sqrt(
+                        Math.pow(edge.to[0] - edge.from[0], 2) + 
+                        Math.pow(edge.to[1] - edge.from[1], 2) + 
+                        Math.pow(edge.to[2] - edge.from[2], 2)
+                      ) + 'px',
+                      height: '2px',
+                      left: edge.from[0] + 'px',
+                      top: edge.from[1] + 'px',
+                      transform: `translateZ(${edge.from[2]}px) rotateY(${
+                        Math.atan2(edge.to[2] - edge.from[2], edge.to[0] - edge.from[0]) * 180 / Math.PI
+                      }deg) rotateX(${
+                        -Math.atan2(edge.to[1] - edge.from[1], 
+                        Math.sqrt(Math.pow(edge.to[0] - edge.from[0], 2) + Math.pow(edge.to[2] - edge.from[2], 2))) * 180 / Math.PI
+                      }deg)`,
+                      transformOrigin: 'left center',
+                      opacity: 0.6
+                    }}
+                  />
+                ))}
+
+                {/* Individual boxes with wireframes */}
+                {placedBoxes.map((box, index) => (
+                  <div
+                    key={box.id}
+                    className="absolute"
+                    style={{
+                      left: `${box.x}px`,
+                      top: `${box.y}px`,
+                      width: `${box.width}px`,
+                      height: `${box.height}px`,
+                      transform: `translateZ(${box.z}px)`,
+                      transformStyle: 'preserve-3d',
+                      animation: `boxAppear 0.5s ease-out ${index * 0.05}s both`
+                    }}
+                  >
+                    {/* Box faces */}
+                    {/* Front face */}
+                    <div
+                      className="absolute inset-0 border-2 border-gray-800"
+                      style={{
+                        backgroundColor: box.color,
+                        opacity: box.opacity
+                      }}
+                    />
+                    
+                    {/* Top face */}
+                    <div
+                      className="absolute border-2 border-gray-800"
+                      style={{
+                        width: `${box.width}px`,
+                        height: `${box.depth}px`,
+                        backgroundColor: box.color,
+                        opacity: box.opacity * 0.8,
+                        transform: `rotateX(90deg) translateZ(${box.height}px)`,
+                        transformOrigin: 'top'
+                      }}
+                    />
+                    
+                    {/* Right face */}
+                    <div
+                      className="absolute border-2 border-gray-800"
+                      style={{
+                        width: `${box.depth}px`,
+                        height: `${box.height}px`,
+                        backgroundColor: box.color,
+                        opacity: box.opacity * 0.6,
+                        transform: `rotateY(90deg) translateZ(${box.width}px)`,
+                        transformOrigin: 'right'
+                      }}
+                    />
+
+                    {/* Box wireframe edges */}
+                    {[
+                      // Front face edges
+                      { from: [0, 0], to: [box.width, 0] },
+                      { from: [0, 0], to: [0, box.height] },
+                      { from: [box.width, 0], to: [box.width, box.height] },
+                      { from: [0, box.height], to: [box.width, box.height] },
+                      // Back face edges (translated in Z)
+                      { from: [0, 0], to: [box.width, 0], z: box.depth },
+                      { from: [0, 0], to: [0, box.height], z: box.depth },
+                      { from: [box.width, 0], to: [box.width, box.height], z: box.depth },
+                      { from: [0, box.height], to: [box.width, box.height], z: box.depth },
+                      // Connecting edges
+                      { from: [0, 0], to: [0, 0], z: box.depth, isZ: true },
+                      { from: [box.width, 0], to: [box.width, 0], z: box.depth, isZ: true },
+                      { from: [0, box.height], to: [0, box.height], z: box.depth, isZ: true },
+                      { from: [box.width, box.height], to: [box.width, box.height], z: box.depth, isZ: true }
+                    ].map((edge, i) => (
+                      <div
+                        key={i}
+                        className="absolute bg-gray-900"
+                        style={{
+                          width: edge.isZ ? '1px' : Math.abs(edge.to[0] - edge.from[0]) || '1px',
+                          height: edge.isZ ? '1px' : Math.abs(edge.to[1] - edge.from[1]) || '1px',
+                          left: edge.from[0] + 'px',
+                          top: edge.from[1] + 'px',
+                          transform: edge.isZ ? `translateZ(0px) rotateY(0deg)` : 'none',
+                          opacity: 0.8
+                        }}
+                      />
+                    ))}
+                  </div>
+                ))}
               </div>
-            ))}
-            
-            {/* Loading indicator */}
-            {isPlaying && (
-              <div className="absolute top-4 right-4">
-                <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin shadow-lg" />
-              </div>
-            )}
-            
-            {/* Progress indicator on container */}
-            <div 
-              className="absolute bottom-2 left-6 right-6 h-1 bg-gray-300 rounded-full overflow-hidden"
-              style={{ transform: 'rotateX(15deg) rotateY(15deg)' }}
-            >
-              <div
-                className={`h-full transition-all duration-300 ${
-                  type === 'master-carton' ? 'bg-blue-500' :
-                  type === 'pallet' ? 'bg-orange-500' : 'bg-purple-500'
-                }`}
-                style={{ width: `${progress}%` }}
-              />
             </div>
+          </div>
+        </div>
+        
+        {/* Progress indicator */}
+        <div className="absolute bottom-4 left-4 right-4">
+          <div className={`h-2 rounded-full ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} overflow-hidden`}>
+            <div
+              className={`h-full transition-all duration-300 ${
+                type === 'master-carton' ? 'bg-blue-500' :
+                type === 'pallet' ? 'bg-orange-500' : 'bg-purple-500'
+              }`}
+              style={{ width: `${progress}%` }}
+            />
           </div>
         </div>
       </div>
@@ -283,16 +426,6 @@ const LoadingAnimation: React.FC<Props> = ({ darkMode, type, productType, onComp
             {progress.toFixed(0)}%
           </span>
         </div>
-        <div className={`w-full rounded-full h-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} overflow-hidden`}>
-          <div
-            className={`h-3 rounded-full transition-all duration-300 ${
-              type === 'master-carton' ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
-              type === 'pallet' ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
-              'bg-gradient-to-r from-purple-500 to-purple-600'
-            } shadow-lg`}
-            style={{ width: `${progress}%` }}
-          />
-        </div>
       </div>
 
       {/* Current Step */}
@@ -306,12 +439,12 @@ const LoadingAnimation: React.FC<Props> = ({ darkMode, type, productType, onComp
           <p className={`text-xs mt-1 ${
             productType === 'tiles' ? 'text-orange-500' : 'text-green-500'
           }`}>
-            {productType === 'tiles' ? 'Vertical stacking constraints applied' : 'Mixed orientation optimization enabled'}
+            {productType === 'tiles' ? 'Grid-based vertical stacking' : 'Mixed orientation bin packing'}
           </p>
         )}
       </div>
 
-      {/* Enhanced Stats Display */}
+      {/* Stats Display */}
       <div className="grid grid-cols-3 gap-4">
         <div className="text-center">
           <div className={`text-2xl font-bold ${
@@ -321,7 +454,7 @@ const LoadingAnimation: React.FC<Props> = ({ darkMode, type, productType, onComp
             {placedBoxes.length}
           </div>
           <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            Items Placed
+            Boxes Packed
           </div>
         </div>
         <div className="text-center">
@@ -334,10 +467,10 @@ const LoadingAnimation: React.FC<Props> = ({ darkMode, type, productType, onComp
         </div>
         <div className="text-center">
           <div className={`text-2xl font-bold ${darkMode ? 'text-yellow-400' : 'text-yellow-500'}`}>
-            {Math.min(78 + Math.floor(progress / 8), 92)}%
+            {productType === 'tiles' ? 'Grid' : 'Mixed'}
           </div>
           <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            Weight Efficiency
+            Packing Method
           </div>
         </div>
       </div>
@@ -346,11 +479,11 @@ const LoadingAnimation: React.FC<Props> = ({ darkMode, type, productType, onComp
         @keyframes boxAppear {
           0% {
             opacity: 0;
-            transform: rotateX(15deg) rotateY(15deg) translateZ(0px) scale(0.8);
+            transform: translateZ(0px) scale(0.8);
           }
           100% {
             opacity: 1;
-            transform: rotateX(15deg) rotateY(15deg) translateZ(var(--z)) scale(1);
+            transform: translateZ(var(--z)) scale(1);
           }
         }
       `}</style>

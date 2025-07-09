@@ -8,9 +8,21 @@ interface Props {
   data: any;
 }
 
+interface Box {
+  id: number;
+  x: number;
+  y: number;
+  z: number;
+  width: number;
+  height: number;
+  depth: number;
+  color: string;
+  opacity: number;
+}
+
 const OptimizationResults: React.FC<Props> = ({ darkMode, type, productType, data }) => {
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
-  const [viewAngle, setViewAngle] = useState({ rotateX: 15, rotateY: 15 });
+  const [viewAngle, setViewAngle] = useState({ rotateX: 20, rotateY: 45 });
 
   // Aesthetic background images from Pexels
   const backgroundImages = [
@@ -41,12 +53,12 @@ const OptimizationResults: React.FC<Props> = ({ darkMode, type, productType, dat
       volume: 15.6,
       recommendations: [
         productType === 'tiles' 
-          ? 'Vertical stacking optimized for tile stability and protection'
-          : 'Consider rotating products 90° for 3% better space utilization',
+          ? 'Grid-based vertical stacking optimized for tile stability'
+          : 'Mixed orientation packing achieved 92% space utilization',
         `Current arrangement optimizes both space and weight constraints for ${productType || 'products'}`,
         productType === 'tiles'
-          ? 'Tile arrangement prevents damage during transport'
-          : 'Alternative stacking pattern could fit 2 additional items'
+          ? 'Uniform grid pattern prevents damage during transport'
+          : 'Alternative orientations could fit 2 additional items'
       ]
     },
     'pallet': {
@@ -56,10 +68,10 @@ const OptimizationResults: React.FC<Props> = ({ darkMode, type, productType, dat
       volume: 85.2,
       recommendations: [
         productType === 'tiles'
-          ? 'Vertical-only stacking ensures tile integrity during transport'
+          ? 'Grid-based stacking ensures tile integrity during transport'
           : 'Mixed orientation stacking increases efficiency by 8%',
         productType === 'tiles'
-          ? 'Optimal vertical arrangement achieved within height constraints'
+          ? 'Optimal grid arrangement achieved within height constraints'
           : 'Add 2 more cartons in vertical space for optimal loading',
         `Weight distribution is excellent across pallet surface for ${productType || 'products'}`
       ]
@@ -71,8 +83,8 @@ const OptimizationResults: React.FC<Props> = ({ darkMode, type, productType, dat
       volume: 156.8,
       recommendations: [
         productType === 'tiles'
-          ? 'Vertical stacking maximizes container utilization for tiles'
-          : 'Near-optimal loading achieved with current configuration',
+          ? 'Grid stacking maximizes container utilization for tiles'
+          : 'Near-optimal bin packing achieved with current configuration',
         productType === 'tiles'
           ? 'Tile protection maintained throughout loading process'
           : 'Consider smaller pallets to fill remaining 6% space',
@@ -83,51 +95,99 @@ const OptimizationResults: React.FC<Props> = ({ darkMode, type, productType, dat
 
   const result = results[type];
 
-  // Generate realistic box positions for final layout
-  const generateBoxes = () => {
-    const boxes = [];
-    const totalBoxes = result.itemsLoaded;
+  // Generate final optimized layout
+  const generateFinalLayout = (): Box[] => {
+    const boxes: Box[] = [];
+    const containerWidth = 320;
+    const containerHeight = 240;
+    const containerDepth = 180;
     
-    for (let i = 0; i < totalBoxes; i++) {
-      const layer = Math.floor(i / 16);
-      const row = Math.floor((i % 16) / 4);
-      const col = i % 4;
+    if (productType === 'tiles') {
+      // Grid-based final layout for tiles
+      const boxWidth = 20;
+      const boxHeight = 25;
+      const boxDepth = 15;
       
-      // Different arrangements for tiles vs tools
-      if (productType === 'tiles') {
-        // Tiles: More uniform, vertical arrangement
-        boxes.push({
-          id: i,
-          x: col * 18 + 15,
-          y: row * 20 + 25,
-          z: layer * 12 + 5,
-          width: 15,
-          height: 18,
-          depth: 12,
-          color: '#F97316',
-          rotation: 0
-        });
-      } else {
-        // Tools: Mixed orientations and sizes
-        const orientations = [0, 90, 180];
-        const rotation = orientations[i % 3];
-        boxes.push({
-          id: i,
-          x: col * 16 + 12 + (Math.random() - 0.5) * 4,
-          y: row * 18 + 20 + (Math.random() - 0.5) * 4,
-          z: layer * 10 + 3,
-          width: 12 + Math.random() * 6,
-          height: 14 + Math.random() * 8,
-          depth: 10 + Math.random() * 4,
-          color: '#10B981',
-          rotation
-        });
+      const cols = Math.floor(containerWidth / boxWidth);
+      const rows = Math.floor(containerDepth / boxDepth);
+      const layers = Math.floor(containerHeight / boxHeight);
+      
+      let id = 0;
+      for (let layer = 0; layer < layers && id < result.itemsLoaded; layer++) {
+        for (let row = 0; row < rows && id < result.itemsLoaded; row++) {
+          for (let col = 0; col < cols && id < result.itemsLoaded; col++) {
+            boxes.push({
+              id: id++,
+              x: col * boxWidth,
+              y: layer * boxHeight,
+              z: row * boxDepth,
+              width: boxWidth,
+              height: boxHeight,
+              depth: boxDepth,
+              color: '#F97316',
+              opacity: 0.8
+            });
+          }
+        }
+      }
+    } else {
+      // Mixed orientation final layout for tools
+      const orientations = [
+        { w: 18, h: 22, d: 12, color: '#10B981' },
+        { w: 22, h: 18, d: 12, color: '#3B82F6' },
+        { w: 15, h: 20, d: 18, color: '#8B5CF6' },
+        { w: 20, h: 15, d: 18, color: '#F59E0B' },
+        { w: 25, h: 16, d: 10, color: '#EF4444' }
+      ];
+      
+      let id = 0;
+      let x = 0, y = 0, z = 0;
+      
+      while (id < result.itemsLoaded) {
+        const orientation = orientations[id % orientations.length];
+        
+        if (x + orientation.w <= containerWidth && 
+            y + orientation.h <= containerHeight && 
+            z + orientation.d <= containerDepth) {
+          
+          boxes.push({
+            id: id++,
+            x: x,
+            y: y,
+            z: z,
+            width: orientation.w,
+            height: orientation.h,
+            depth: orientation.d,
+            color: orientation.color,
+            opacity: 0.8
+          });
+          
+          x += orientation.w;
+          if (x >= containerWidth - 15) {
+            x = 0;
+            z += orientation.d;
+            if (z >= containerDepth - 15) {
+              z = 0;
+              y += orientation.h;
+              if (y >= containerHeight - 15) break;
+            }
+          }
+        } else {
+          x = 0;
+          z += 15;
+          if (z >= containerDepth - 15) {
+            z = 0;
+            y += 20;
+            if (y >= containerHeight - 15) break;
+          }
+        }
       }
     }
+    
     return boxes;
   };
 
-  const boxes = generateBoxes();
+  const finalBoxes = generateFinalLayout();
 
   const cardClass = `backdrop-blur-lg border transition-all duration-300 rounded-2xl p-6 ${
     darkMode 
@@ -137,11 +197,11 @@ const OptimizationResults: React.FC<Props> = ({ darkMode, type, productType, dat
 
   return (
     <div className="space-y-6">
-      {/* Enhanced Final 3D Visualization */}
+      {/* Final 3D Bin Packing Visualization */}
       <div className={cardClass}>
         <div className="flex items-center justify-between mb-6">
           <h3 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            Final 3D Layout - {productType?.toUpperCase() || 'OPTIMIZED'} MODE
+            Final 3D Bin Packing Result - {productType?.toUpperCase() || 'OPTIMIZED'} MODE
           </h3>
           <div className="flex items-center space-x-2">
             <button
@@ -175,173 +235,176 @@ const OptimizationResults: React.FC<Props> = ({ darkMode, type, productType, dat
           </div>
         </div>
 
-        {/* Enhanced 3D Result Visualization */}
+        {/* 3D Bin Packing Result Visualization */}
         <div className={`relative rounded-xl overflow-hidden ${
           darkMode ? 'bg-gray-900' : 'bg-gray-50'
-        } h-[500px] mb-6`}>
+        } h-[600px] mb-6`}>
           {/* Background Image */}
           {backgroundImage && (
             <div 
-              className="absolute inset-0 bg-cover bg-center opacity-15"
+              className="absolute inset-0 bg-cover bg-center opacity-10"
               style={{ backgroundImage: `url(${backgroundImage})` }}
             />
           )}
           
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="relative w-96 h-80" style={{ perspective: '1200px' }}>
-              {/* Enhanced Container with realistic depth */}
+            <div className="relative w-full h-full" style={{ perspective: '1200px' }}>
               <div 
-                className={`absolute border-3 ${
-                  darkMode ? 'border-gray-400' : 'border-gray-600'
-                } bg-gradient-to-br ${
-                  darkMode ? 'from-gray-800/10 to-gray-700/10' : 'from-gray-100/10 to-gray-200/10'
-                } shadow-2xl`}
+                className="absolute inset-0 flex items-center justify-center"
                 style={{
-                  width: '320px',
-                  height: '240px',
-                  left: '20px',
-                  top: '20px',
                   transform: `rotateX(${viewAngle.rotateX}deg) rotateY(${viewAngle.rotateY}deg)`,
                   transformStyle: 'preserve-3d',
                   transition: 'transform 0.5s ease-in-out'
                 }}
               >
-                {/* Container floor with grid pattern */}
-                <div 
-                  className={`absolute bottom-0 left-0 right-0 h-3 ${
-                    darkMode ? 'bg-gray-600' : 'bg-gray-400'
-                  } opacity-60`}
-                  style={{ 
-                    transform: 'rotateX(90deg) translateZ(1.5px)',
-                    backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 11px)'
-                  }}
-                />
-                
-                {/* Container back wall */}
-                <div 
-                  className={`absolute top-0 bottom-0 right-0 w-3 ${
-                    darkMode ? 'bg-gray-600' : 'bg-gray-400'
-                  } opacity-40`}
-                  style={{ transform: 'rotateY(90deg) translateZ(1.5px)' }}
-                />
-                
-                {/* Container left wall */}
-                <div 
-                  className={`absolute top-0 bottom-0 left-0 w-3 ${
-                    darkMode ? 'bg-gray-600' : 'bg-gray-400'
-                  } opacity-30`}
-                  style={{ transform: 'rotateY(-90deg) translateZ(1.5px)' }}
-                />
-              </div>
-              
-              {/* Realistic 3D Boxes with enhanced details */}
-              {boxes.map((box, index) => (
-                <div
-                  key={box.id}
-                  className="absolute transition-all duration-700 ease-out hover:scale-110 cursor-pointer"
-                  style={{
-                    left: `${box.x}px`,
-                    top: `${box.y}px`,
-                    width: `${box.width}px`,
-                    height: `${box.height}px`,
-                    transform: `rotateX(${viewAngle.rotateX}deg) rotateY(${viewAngle.rotateY + box.rotation}deg) translateZ(${box.z}px)`,
-                    transformStyle: 'preserve-3d',
-                    opacity: 0.9,
-                    animation: `boxFinalAppear 0.8s ease-out ${index * 0.05}s both`,
-                    transition: 'transform 0.5s ease-in-out'
-                  }}
-                >
-                  {/* Box Front Face with enhanced styling */}
-                  <div
-                    className="absolute inset-0 border border-gray-800/30 shadow-xl"
-                    style={{
-                      backgroundColor: box.color,
-                      background: `linear-gradient(135deg, ${box.color} 0%, ${box.color}dd 50%, ${box.color}bb 100%)`,
-                      boxShadow: '0 4px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2)'
-                    }}
-                  />
-                  
-                  {/* Box Top Face with lighting effect */}
-                  <div
-                    className="absolute border border-gray-800/30"
-                    style={{
-                      width: `${box.width}px`,
-                      height: `${box.depth}px`,
-                      backgroundColor: box.color,
-                      background: `linear-gradient(45deg, ${box.color}ee 0%, ${box.color}cc 50%, ${box.color}aa 100%)`,
-                      transform: `rotateX(90deg) translateZ(${box.height}px)`,
-                      transformOrigin: 'top',
-                      boxShadow: 'inset 0 0 10px rgba(255,255,255,0.1)'
-                    }}
-                  />
-                  
-                  {/* Box Right Face with shadow */}
-                  <div
-                    className="absolute border border-gray-800/30"
-                    style={{
-                      width: `${box.depth}px`,
-                      height: `${box.height}px`,
-                      backgroundColor: box.color,
-                      background: `linear-gradient(45deg, ${box.color}cc 0%, ${box.color}99 50%, ${box.color}77 100%)`,
-                      transform: `rotateY(90deg) translateZ(${box.width}px)`,
-                      transformOrigin: 'right'
-                    }}
-                  />
-                  
-                  {/* Enhanced Box Label/Texture */}
-                  <div 
-                    className="absolute inset-1 flex flex-col items-center justify-center text-white text-xs font-bold opacity-90"
-                    style={{ textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}
-                  >
-                    <div className="text-lg mb-1">
-                      {productType === 'tiles' ? '🔲' : productType === 'tools' ? '🔧' : '📦'}
+                {/* Container wireframe */}
+                <div className="relative" style={{ 
+                  width: '320px', 
+                  height: '240px',
+                  transformStyle: 'preserve-3d'
+                }}>
+                  {/* Container edges */}
+                  {[
+                    // Bottom rectangle
+                    { from: [0, 240, 0], to: [320, 240, 0] },
+                    { from: [0, 240, 0], to: [0, 240, 180] },
+                    { from: [320, 240, 0], to: [320, 240, 180] },
+                    { from: [0, 240, 180], to: [320, 240, 180] },
+                    // Top rectangle
+                    { from: [0, 0, 0], to: [320, 0, 0] },
+                    { from: [0, 0, 0], to: [0, 0, 180] },
+                    { from: [320, 0, 0], to: [320, 0, 180] },
+                    { from: [0, 0, 180], to: [320, 0, 180] },
+                    // Vertical edges
+                    { from: [0, 0, 0], to: [0, 240, 0] },
+                    { from: [320, 0, 0], to: [320, 240, 0] },
+                    { from: [0, 0, 180], to: [0, 240, 180] },
+                    { from: [320, 0, 180], to: [320, 240, 180] }
+                  ].map((edge, i) => (
+                    <div
+                      key={i}
+                      className={`absolute ${darkMode ? 'bg-gray-300' : 'bg-gray-700'}`}
+                      style={{
+                        width: Math.sqrt(
+                          Math.pow(edge.to[0] - edge.from[0], 2) + 
+                          Math.pow(edge.to[1] - edge.from[1], 2) + 
+                          Math.pow(edge.to[2] - edge.from[2], 2)
+                        ) + 'px',
+                        height: '3px',
+                        left: edge.from[0] + 'px',
+                        top: edge.from[1] + 'px',
+                        transform: `translateZ(${edge.from[2]}px) rotateY(${
+                          Math.atan2(edge.to[2] - edge.from[2], edge.to[0] - edge.from[0]) * 180 / Math.PI
+                        }deg) rotateX(${
+                          -Math.atan2(edge.to[1] - edge.from[1], 
+                          Math.sqrt(Math.pow(edge.to[0] - edge.from[0], 2) + Math.pow(edge.to[2] - edge.from[2], 2))) * 180 / Math.PI
+                        }deg)`,
+                        transformOrigin: 'left center',
+                        opacity: 0.8
+                      }}
+                    />
+                  ))}
+
+                  {/* Individual boxes with proper wireframes */}
+                  {finalBoxes.map((box, index) => (
+                    <div
+                      key={box.id}
+                      className="absolute hover:scale-105 transition-transform cursor-pointer"
+                      style={{
+                        left: `${box.x}px`,
+                        top: `${box.y}px`,
+                        width: `${box.width}px`,
+                        height: `${box.height}px`,
+                        transform: `translateZ(${box.z}px)`,
+                        transformStyle: 'preserve-3d',
+                        animation: `boxFinalAppear 0.8s ease-out ${index * 0.02}s both`
+                      }}
+                    >
+                      {/* Box faces with proper coloring */}
+                      {/* Front face */}
+                      <div
+                        className="absolute inset-0 border-2 border-gray-900"
+                        style={{
+                          backgroundColor: box.color,
+                          opacity: box.opacity,
+                          boxShadow: 'inset 0 0 10px rgba(0,0,0,0.2)'
+                        }}
+                      />
+                      
+                      {/* Top face */}
+                      <div
+                        className="absolute border-2 border-gray-900"
+                        style={{
+                          width: `${box.width}px`,
+                          height: `${box.depth}px`,
+                          backgroundColor: box.color,
+                          opacity: box.opacity * 0.9,
+                          transform: `rotateX(90deg) translateZ(${box.height}px)`,
+                          transformOrigin: 'top',
+                          filter: 'brightness(1.1)'
+                        }}
+                      />
+                      
+                      {/* Right face */}
+                      <div
+                        className="absolute border-2 border-gray-900"
+                        style={{
+                          width: `${box.depth}px`,
+                          height: `${box.height}px`,
+                          backgroundColor: box.color,
+                          opacity: box.opacity * 0.7,
+                          transform: `rotateY(90deg) translateZ(${box.width}px)`,
+                          transformOrigin: 'right',
+                          filter: 'brightness(0.8)'
+                        }}
+                      />
+
+                      {/* Box label */}
+                      <div 
+                        className="absolute inset-0 flex items-center justify-center text-white text-xs font-bold pointer-events-none"
+                        style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}
+                      >
+                        <div className="text-center">
+                          <div className="text-sm mb-1">
+                            {productType === 'tiles' ? '🔲' : '🔧'}
+                          </div>
+                          <div className="text-[10px] opacity-75">
+                            {box.id + 1}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-[8px] opacity-75">
-                      {box.id + 1}
-                    </div>
-                  </div>
-                  
-                  {/* Box edge highlights */}
-                  <div 
-                    className="absolute inset-0 border border-white/20 pointer-events-none"
-                    style={{ 
-                      background: 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%)'
-                    }}
-                  />
+                  ))}
                 </div>
-              ))}
-              
-              {/* Ambient lighting effect */}
-              <div 
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background: 'radial-gradient(circle at 60% 40%, rgba(255,255,255,0.1) 0%, transparent 70%)',
-                  transform: `rotateX(${viewAngle.rotateX}deg) rotateY(${viewAngle.rotateY}deg)`
-                }}
-              />
+              </div>
             </div>
           </div>
           
-          {/* View controls overlay */}
-          <div className="absolute bottom-4 left-4 flex items-center space-x-2">
-            <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+          {/* Info overlay */}
+          <div className="absolute bottom-4 left-4 flex items-center space-x-4">
+            <div className={`px-4 py-2 rounded-full text-sm font-medium ${
               productType === 'tiles' 
                 ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
                 : productType === 'tools'
                 ? 'bg-green-500/20 text-green-300 border border-green-500/30'
                 : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
             }`}>
-              {result.itemsLoaded} items loaded
+              {result.itemsLoaded} boxes packed
             </div>
-            <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+            <div className={`px-4 py-2 rounded-full text-sm font-medium ${
               darkMode ? 'bg-gray-700/80 text-gray-300' : 'bg-white/80 text-gray-700'
             }`}>
               {result.spaceUtilized}% space utilized
             </div>
+            <div className={`px-4 py-2 rounded-full text-sm font-medium ${
+              darkMode ? 'bg-gray-700/80 text-gray-300' : 'bg-white/80 text-gray-700'
+            }`}>
+              {productType === 'tiles' ? 'Grid Method' : 'Mixed Orientation'}
+            </div>
           </div>
         </div>
 
-        {/* Enhanced Quick Stats */}
+        {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className={`text-center p-4 rounded-xl ${
             darkMode ? 'bg-gray-700/50' : 'bg-gray-100'
@@ -411,7 +474,7 @@ const OptimizationResults: React.FC<Props> = ({ darkMode, type, productType, dat
               <BarChart3 className="w-5 h-5 text-white" />
             </div>
             <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              Utilization Analysis
+              Bin Packing Analysis
             </h3>
           </div>
 
@@ -480,7 +543,7 @@ const OptimizationResults: React.FC<Props> = ({ darkMode, type, productType, dat
               <Lightbulb className="w-5 h-5 text-white" />
             </div>
             <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              AI Optimization Tips
+              AI Optimization Analysis
             </h3>
           </div>
 
@@ -504,16 +567,16 @@ const OptimizationResults: React.FC<Props> = ({ darkMode, type, productType, dat
             <div className="flex items-center space-x-2 mb-2">
               <TrendingUp className={`w-4 h-4 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
               <span className={`font-medium ${darkMode ? 'text-green-300' : 'text-green-700'}`}>
-                Optimization Score
+                Bin Packing Score
               </span>
             </div>
             <p className={`text-3xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
               {Math.round((result.spaceUtilized + result.weightEfficiency) / 2)}/100
             </p>
             <p className={`text-sm ${darkMode ? 'text-green-300' : 'text-green-600'}`}>
-              {productType === 'tiles' ? 'Excellent tile protection achieved!' : 
-               productType === 'tools' ? 'Optimal mixed-orientation packing!' : 
-               'Excellent optimization achieved!'}
+              {productType === 'tiles' ? 'Excellent grid-based packing achieved!' : 
+               productType === 'tools' ? 'Optimal mixed-orientation bin packing!' : 
+               'Excellent 3D bin packing optimization!'}
             </p>
           </div>
         </div>
@@ -523,11 +586,11 @@ const OptimizationResults: React.FC<Props> = ({ darkMode, type, productType, dat
         @keyframes boxFinalAppear {
           0% {
             opacity: 0;
-            transform: rotateX(${viewAngle.rotateX}deg) rotateY(${viewAngle.rotateY}deg) translateZ(0px) scale(0.5);
+            transform: translateZ(0px) scale(0.5);
           }
           100% {
-            opacity: 0.9;
-            transform: rotateX(${viewAngle.rotateX}deg) rotateY(${viewAngle.rotateY}deg) translateZ(var(--z)) scale(1);
+            opacity: 1;
+            transform: translateZ(var(--z)) scale(1);
           }
         }
       `}</style>
